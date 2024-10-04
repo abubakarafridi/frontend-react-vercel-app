@@ -13,7 +13,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 
-const API_URL = 'http://localhost:3000/api/users';
+const API_URL = 'https://backed-express-vercel-app.vercel.app/api/users';
 
 function App() {
   const [users, setUsers] = useState([]);
