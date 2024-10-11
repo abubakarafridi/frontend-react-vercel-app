@@ -7,10 +7,11 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import { Button, TextField } from '@mui/material';
+import { Button, Container, TextField, Typography } from '@mui/material';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 
 const API_URL = 'https://backed-express-vercel-app.vercel.app/api/users';
@@ -19,28 +20,17 @@ function App() {
   const [users, setUsers] = useState([]);
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [updateUser, setUpdateUser] = useState({ id: '', name: '', email: ''});
+  const [updateUser, setUpdateUser] = useState({ id: '', name: '', email: '' });
   const [isUpdate, setIsUpdate] = useState(false);
   const [open, setOpen] = useState(false);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get(API_URL);
-      setUsers(response.data.data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const handleClickOpen = () => {
     setOpen(true);
     setIsUpdate(false);
-    setNewUserName('');
-    setNewUserEmail('');
+  };
+
+  const handleClose = () => {
+    setOpen(false);
   };
 
   const handleUpdateOpen = (user) => {
@@ -49,104 +39,65 @@ function App() {
     setUpdateUser(user);
   };
 
-  const handleClose = () => {
+  const handleUpdateClose = () => {
     setOpen(false);
     setIsUpdate(false);
   };
 
-  const addUser = async () => {
-    if (!newUserName || !newUserEmail) return;
-    try {
-      const response = await axios.post(API_URL, { name: newUserName, email: newUserEmail });
-      setUsers([...users, response.data]);
-      setNewUserName('');
-      setNewUserEmail('');
-      handleClose();
-    } catch (error) {
-      console.error('Error adding user:', error);
-    }
+  const fetchUsers = async () => {
+    const response = await axios.get(API_URL);
+    const content = response.data;
+    setUsers(content.data);
   };
 
-  const updateUserById = async (id) => {
-    if (!updateUser.name || !updateUser.email) return;
-    try {
-      const response = await axios.put(`${API_URL}/${id}`, { name: updateUser.name, email: updateUser.email });
-      setUsers(users.map(user => (user.id === id ? response.data : user)));
-      setUpdateUser({ id: '', name: '', email: '' });
-      handleClose();
-    } catch (error) {
-      console.error('Error updating user:', error);
-    }
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const addUser = () => {
+    axios
+      .post(API_URL, { name: newUserName, email: newUserEmail })
+      .then((response) => {
+        setUsers([...users, response.data]);
+        setNewUserName('');
+        setNewUserEmail('');
+        fetchUsers();
+        handleUpdateClose();
+      })
+      .catch((err) => console.log(err));
   };
 
-  const deleteUserById = async (id) => {
-    try {
-      await axios.delete(`${API_URL}/${id}`);
-      setUsers(users.filter(user => user.id !== id));
-    } catch (error) {
-      console.error('Error deleting user:', error);
-    }
+  const updateUserById = (id) => {
+    axios
+      .put(`${API_URL}/${id}`, {
+        name: updateUser.name,
+        email: updateUser.email,
+      })
+      .then((response) => {
+        setUsers(users.map((user) => (user.id === id ? response.data : user)));
+        setUpdateUser({ id: '', name: '', email: '' });
+        fetchUsers();
+        handleUpdateClose();
+      })
+      .catch((err) => console.error(err));
   };
 
-  const UserDialog = ({ open, handleClose, handleSave, user, setUser, isUpdate }) => (
-    <Dialog open={open} onClose={handleClose} aria-labelledby="form-dialog-title">
-      <DialogTitle>{isUpdate ? "Update User" : "Add User"}</DialogTitle>
-      <DialogContent>
-        <TextField
-          label="Name"
-          variant="standard"
-          fullWidth
-          value={user.name}
-          onChange={(e) => setUser({ ...user, name: e.target.value })}
-          sx={{ marginBottom: 2 }}
-        />
-        <TextField
-          label="Email"
-          variant="standard"
-          fullWidth
-          value={user.email}
-          onChange={(e) => setUser({ ...user, email: e.target.value })}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} color="warning" variant="contained">Cancel</Button>
-        <Button onClick={handleSave} color="success" variant="contained">
-          {isUpdate ? "Update" : "Add"}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
+  const deleteUserById = (id) => {
+    axios
+      .delete(`${API_URL}/${id}`)
+      .then(() => {
+        setUsers(users.filter((user) => user.id !== id));
+      })
+      .catch((err) => console.err(err));
+  };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        textAlign: 'center',
-      }}
-    >
+    <Container>
       <h1>User Management</h1>
-      <Button 
-        variant="contained" 
-        color="primary" 
-        onClick={handleClickOpen}
-        sx={{ marginBottom: 2, width: 800}}
-      >
+      <Button variant="contained" color="primary" onClick={() => handleClickOpen()}>
         Add User
       </Button>
 
-      <UserDialog 
-        open={open}
-        handleClose={handleClose}
-        handleSave={isUpdate ? () => updateUserById(updateUser.id) : addUser}
-        user={isUpdate ? updateUser : { name: newUserName, email: newUserEmail }}
-        setUser={isUpdate ? setUpdateUser : (u) => { setNewUserName(u.name); setNewUserEmail(u.email); }}
-        isUpdate={isUpdate}
-      />
-
-      <TableContainer sx={{ maxWidth: 800 }}>
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
           <TableHead>
             <TableRow>
@@ -163,19 +114,17 @@ function App() {
                 </TableCell>
                 <TableCell align="right">{user.email}</TableCell>
                 <TableCell align="right">
-                  <Button 
-                    sx={{ marginRight: 1 }} 
-                    variant="contained" 
-                    color="secondary" 
+                  <Button
+                    variant="contained"
                     onClick={() => handleUpdateOpen(user)}
-                  >
+                    color="secondary">
                     Edit
                   </Button>
-                  <Button 
-                    variant="contained" 
-                    color="error" 
+                  <Button
+                    sx={{ m: 0.5 }}
+                    variant="contained"
                     onClick={() => deleteUserById(user.id)}
-                  >
+                    color="error">
                     Delete
                   </Button>
                 </TableCell>
@@ -183,8 +132,93 @@ function App() {
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
-    </div>
+
+      {isUpdate ? (
+        <Dialog
+          open={open}
+          onClose={handleUpdateClose}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description">
+          <DialogTitle id="alert-dialog-title">{'Update User'}</DialogTitle>
+          <DialogContent>
+            <DialogContentText
+              id="alert-dialog-description"
+              sx={{ display: 'flex', flexDirection: 'column', rowGap: '20px' }}>
+              <TextField
+                id="standard-basic"
+                value={updateUser.name}
+                onChange={(e) =>
+                  setUpdateUser({ ...updateUser, name: e.target.value })
+                }
+                label="Name"
+                variant="standard"
+              />
+              <TextField
+                id="standard-basic"
+                value={updateUser.email}
+                onChange={(e) =>
+                  setUpdateUser({ ...updateUser, email: e.target.value })
+                }
+                label="Email"
+                variant="standard"
+              />
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose} color="warning" variant="contained">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => updateUserById(updateUser.id)}
+              color="success"
+              variant="contained"
+              autoFocus>
+              Update
+            </Button>
+          </DialogActions>
+        </Dialog>
+      ) : (
+        <Dialog
+          open={open}
+          onClose={handleClose}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description">
+          <DialogTitle id="alert-dialog-title">{'Add User'}</DialogTitle>
+          <DialogContent>
+            <DialogContentText
+              id="alert-dialog-description"
+              sx={{ display: 'flex', flexDirection: 'column', rowGap: '20px' }}>
+              <TextField
+                id="standard-basic"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                label="Name"
+                variant="standard"
+              />
+              <TextField
+                id="standard-basic"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                label="Email"
+                variant="standard"
+              />
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose} color="warning" variant="contained">
+              Cancel
+            </Button>
+            <Button
+              onClick={addUser}
+              color="success"
+              variant="contained"
+              autoFocus>
+              Add
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+    </Container>
   );
 }
 
